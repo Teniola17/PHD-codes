@@ -1,0 +1,32 @@
+data {
+  int<lower=1> N_std;           // Number of studies
+  int<lower=0> y[N_std];        // Number of successes
+  int<lower=0> n[N_std];        // Number of trials
+  real<lower=0> prior_prec_tau; // Precision for tau prior
+}
+
+parameters {
+  real mu;                      // Mean of the logit probabilities
+  real<lower=0> tau;            // Standard deviation of the logit probabilities
+  vector[N_std] logit_p;        // Logit of probabilities for each study
+  real logit_p_pred;            // Logit of predicted probability
+}
+
+model {
+  // Priors
+  tau ~ normal(0, 1 / sqrt(prior_prec_tau)); // Half-normal prior for tau
+  mu ~ normal(0, 0.001);                    // Prior for mu
+  
+  // Likelihood
+  for (i in 1:N_std) {
+    y[i] ~ binomial(n[i], inv_logit(logit_p[i])); // Binomial likelihood
+    logit_p[i] ~ normal(mu, tau);                // Hierarchical normal prior
+  }
+  
+  // Prediction for a new study
+  logit_p_pred ~ normal(mu, tau);               // Predictive distribution
+}
+
+generated quantities {
+  real p_pred = inv_logit(logit_p_pred);        // Predicted probability
+}
